@@ -248,7 +248,7 @@ class Plot:
         if hasattr(self, '_backend'):
             self._backend.close()
         self._backend = self.backend(self)
-        self._backend.show()
+        return self._backend.show()
 
     def save(self, path):
         if hasattr(self, '_backend'):
@@ -469,7 +469,7 @@ class PlotGrid:
         if hasattr(self, '_backend'):
             self._backend.close()
         self._backend = self.backend(self)
-        self._backend.show()
+        return self._backend.show()
 
     def save(self, path):
         if hasattr(self, '_backend'):
@@ -1361,6 +1361,8 @@ class MatplotlibBackend(BaseBackend):
         # https://github.com/matplotlib/matplotlib/issues/17130
         xlims, ylims, zlims = [], [], []
 
+        x_list, y_list = [], []
+
         for s in series:
             # Create the collections
             if s.is_2Dline:
@@ -1412,6 +1414,8 @@ class MatplotlibBackend(BaseBackend):
                 if len(points) == 2:
                     # interval math plotting
                     x, y = _matplotlib_list(points[0])
+                    x_list.append(x)
+                    y_list.append(y)
                     ax.fill(x, y, facecolor=s.line_color, edgecolor='None')
                 else:
                     # use contourf or contour depending on whether it is
@@ -1527,6 +1531,7 @@ class MatplotlibBackend(BaseBackend):
             ax.set_xlim(parent.xlim)
         if parent.ylim:
             ax.set_ylim(parent.ylim)
+        return x_list, y_list
 
 
     def process_series(self):
@@ -1540,13 +1545,17 @@ class MatplotlibBackend(BaseBackend):
         else:
             series_list = parent._series
 
+        x_list_series, y_list_series = [], []
         for i, (series, ax) in enumerate(zip(series_list, self.ax)):
             if isinstance(self.parent, PlotGrid):
                 parent = self.parent.args[i]
-            self._process_series(series, ax, parent)
+            x_list, y_list = self._process_series(series, ax, parent)
+            x_list_series.append(x_list)
+            y_list_series.append(y_list)
+        return x_list_series, y_list_series
 
     def show(self):
-        self.process_series()
+        x_list, y_list = self.process_series()
         #TODO after fixing https://github.com/ipython/ipython/issues/1255
         # you can uncomment the next line and remove the pyplot.show() call
         #self.fig.show()
@@ -1555,6 +1564,7 @@ class MatplotlibBackend(BaseBackend):
             self.plt.show()
         else:
             self.close()
+        return x_list, y_list
 
     def save(self, path):
         self.process_series()
